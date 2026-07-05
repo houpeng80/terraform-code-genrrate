@@ -1,4 +1,5 @@
 import logging
+from typing import List, Any
 
 from langchain.agents.middleware import AgentMiddleware
 from langchain_core.runnables import RunnableConfig
@@ -7,6 +8,16 @@ from langchain_core.messages import HumanMessage
 from langgraph.types import Checkpointer
 
 from backend.terraform_code_generate.agents.agent_state import CodeAgentState
+from backend.terraform_code_generate.agents.code_agent.data_source_agent.data_source_code_generate import \
+    DataSourceCodeGenerate
+from backend.terraform_code_generate.agents.code_agent.resource_agent.resource_generate_code import ResourceCodeGenerate
+from backend.terraform_code_generate.agents.docs_agents.data_source_agent.data_source_doc_generate import \
+    DataSourceDocGenerate
+from backend.terraform_code_generate.agents.docs_agents.resource_agent.resource_doc_generate import ResourceDocGenerate
+from backend.terraform_code_generate.agents.generate import Generate
+from backend.terraform_code_generate.agents.test_agent.data_source_agent.data_source_test_generate import \
+    DataSourceTestGenerate
+from backend.terraform_code_generate.agents.test_agent.resource_agent.resource_test_generate import ResourceTestGenerate
 from backend.terraform_code_generate.config.config import AgentConfig
 from backend.terraform_code_generate.middlewares import  LoggingMiddleware, TokenUsageMiddleware, ContextSummarizationMiddleware
 from backend.terraform_code_generate.plan_and_execute.fixed_step.prompt import PLANNER_PROMPT_TEMPLATE
@@ -48,25 +59,33 @@ class FixedStepPlanner(Planner):
             )
 
             resource_type = result["structured_response"].resource_type
-            # if resource_type == "data_source":
-            #     graph = build_data_source_graph(
-            #         agent_config=self.agent_config,
-            #         model=self.model,
-            #         config=self.config,
-            #         check_pointer=self.check_pointer,
-            #     )
-            #     # return graph
-            # elif resource_type == "resource":
-            #     pass
-            # else:
-            #     print(f"\n ❌ resource type {resource_type} is not supported:")
-            #     raise ValueError(f"not supported resource type：{resource_type}")
 
+            if not self.agent_config.generate_code and not self.agent_config.generate_test and not self.agent_config.generate_doc:
+                print("\n ❌ 没有要生成的内容，请前往config.yaml中配置要生成的 code/test/doc")
+                return None
 
-            print(f"\n ✅ generate plan complete ")
+            steps = []
+            if resource_type == "data_source":
+                if self.agent_config.generate_code:
+                    steps.append(DataSourceCodeGenerate(self.model, self.config, self.check_pointer))
+                if self.agent_config.generate_test:
+                    steps.append(DataSourceTestGenerate(self.model, self.config, self.check_pointer))
+                if self.agent_config.generate_doc:
+                    steps.append(DataSourceDocGenerate(self.model, self.config, self.check_pointer))
+            elif resource_type == "resource":
+                if self.agent_config.generate_code:
+                    steps.append(ResourceCodeGenerate(self.model, self.config, self.check_pointer))
+                if self.agent_config.generate_test:
+                    steps.append(ResourceTestGenerate(self.model, self.config, self.check_pointer))
+                if self.agent_config.generate_doc:
+                    steps.append(ResourceDocGenerate(self.model, self.config, self.check_pointer))
+            else:
+                print(f"\n ❌ resource type {resource_type} is not supported:")
+                raise ValueError(f"not supported resource type：{resource_type}")
 
-            steps = ["generate_code", "generate_test", "generate_doc"]
-            return FixedStepPlannerResponse(resource_type=resource_type,steps=steps)
+            print(f"\n ✅ generate fixed plan complete ")
+
+            return FixedStepPlannerResponse(resource_type=resource_type, steps=steps)
 
         except Exception as e:
             print(f"\n ❌ generate plan fail: {e}")

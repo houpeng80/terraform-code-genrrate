@@ -11,6 +11,8 @@ from langgraph.types import  Checkpointer
 from backend.terraform_code_generate.agents.check_agent.code_check.data_source.data_source_code_check import DataSourceCodeCheck, \
     DataSourceCodeCheckInfo
 from backend.terraform_code_generate.agents.agent_state import CodeAgentState
+from backend.terraform_code_generate.agents.check_agent.code_check.resource.resource_code_check import \
+    ResourceCodeCheck, ResourceCodeCheckInfo
 from backend.terraform_code_generate.config.config import AgentConfig
 
 logger = logging.getLogger(__name__)
@@ -61,8 +63,13 @@ class CodeCheckMiddleware(AgentMiddleware[CodeAgentState]):
                     "code_result": latest_message.tool_calls[0]['args']["content"],
                 }
             elif "finish_reason" in latest_message.response_metadata and latest_message.response_metadata["finish_reason"] in ["stop", "length"]:
-                check_result = DataSourceCodeCheck(self.model, self.config, self.checkpointer).code_check(agent_state=state)
-                fix_message = self.build_code_review_message(check_result)
+                if state.resource_type == "resource":
+                    check_result = DataSourceCodeCheck(self.model, self.config, self.checkpointer).code_check(agent_state=state)
+                    fix_message = self.build_data_source_code_review_message(check_result)
+                else:
+                    check_result = ResourceCodeCheck(self.model, self.config, self.checkpointer).code_check(agent_state=state)
+                    fix_message = self.build_resource_code_review_message(check_result)
+
                 logger.info(f"\ncode check result={fix_message}")
                 print(f"\ncode check result={fix_message}")
                 if len(fix_message) > 0:
@@ -79,7 +86,7 @@ class CodeCheckMiddleware(AgentMiddleware[CodeAgentState]):
 
         return None
 
-    def build_code_review_message(self, check_result: DataSourceCodeCheckInfo):
+    def build_data_source_code_review_message(self, check_result: DataSourceCodeCheckInfo):
         res = ""
         if check_result.contain_description:
             res = res + f"不要包含 Description\n"
@@ -107,3 +114,6 @@ class CodeCheckMiddleware(AgentMiddleware[CodeAgentState]):
             res = res + f"分页不正确，根据api的分页信息选择正确的分页方式\n"
 
         return res
+
+    def build_resource_code_review_message(self, check_result: ResourceCodeCheckInfo):
+        return ""
