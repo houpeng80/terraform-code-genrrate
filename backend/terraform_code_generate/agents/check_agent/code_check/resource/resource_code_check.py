@@ -1,10 +1,11 @@
 import logging
 
+from pydantic import BaseModel, Field
+
 from langchain.agents.middleware import AgentMiddleware
 from langchain_core.runnables import RunnableConfig
 from langchain_openai.chat_models.base import BaseChatOpenAI
 from langgraph.types import Checkpointer
-from pydantic import BaseModel, Field
 
 from backend.terraform_code_generate.agents.check_agent.code_check.code_check import CodeCheck
 from backend.terraform_code_generate.agents.check_agent.code_check.resource.prompt import apply_prompt_template
@@ -13,18 +14,19 @@ from backend.terraform_code_generate.middlewares.tool_cache_middleware import To
 
 logger = logging.getLogger(__name__)
 
-AGENT_NAME = "data_source_code_check_agent"
+AGENT_NAME = "resource_code_check_agent"
 
 class ResourceCodeCheckInfo(BaseModel):
     contain_description: bool = Field(description="Whether the code contain description, return yes or no")
     contain_force_new: bool = Field(description="Whether the code contain ForceNew, return yes or no")
-    added_params: list[str] = Field(description="The params that the code contain, but the API query params and request params contain do not contain, return the params")
-    deleted_params: list[str] = Field(description="The params that the code do not contain, but the API query params or request params contain, you must ignore the page params, return the params")
+    non_updatable_params_contain_updated_param: list[str] = Field(description="The params that the non updatable params list contain, but it is support updated, return the params")
+    non_updatable_params_not_contain_non_updatable_param: list[str] = Field(description="The params that the non updatable params not contain, but it is not support updated, return the params")
     validation_error: bool = Field(description="Whether the code contain ValidationFunc except the params which type is bool, return yes or no")
     bool_type_params_error: list[str] = Field(description="The params that the type is bool in API, but the type in code is not str or do not contain ValidationFunc, ignore response params return the params")
     region_param_error: bool = Field(description="If the service is global, region should not be contained, and if the service is not global, region should be contained, return yes or no")
-    contain_api_comment: bool = Field(description="Whether the code API comment contain the API URI, return yes or no")
-    page_right : bool = Field(description="If the API support page then the code should support, and if the API do not support page then the code should not support, return yes or no")
+    contain_api_comment: bool = Field(description="Whether the code API comment contain the whole API URI, return yes or no")
+    contain_import : bool = Field(description="If the code read func is not empty, then import func should be contained, return yes or no")
+    contain_timeout : bool = Field(description="If the code contain wait func, then timeout should be contained, return yes or no")
 
 class ResourceCodeCheck(CodeCheck):
     """check the code whether is correct or not."""

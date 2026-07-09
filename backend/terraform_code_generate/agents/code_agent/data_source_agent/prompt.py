@@ -227,7 +227,7 @@ func dataSourceRdsBackupDatabasesRead(_ context.Context, d *schema.ResourceData,
 
    3. 如果API支持分页，并且URI中的请求方法不为 GET
 
-      1. 首先定义一个零时变量 `res` 保存查询结果
+      1. 首先定义一个临时变量 `res` 保存查询结果
       2. 定义分页参数
          - 如果API中包含`limit`， 记录API中允许设置的最大值，记为`maxLimit`，定义变量`offset`
          - 如果API是使用`page+size`分页，那么定义变量`page`，并且赋值为 `1`
@@ -483,9 +483,9 @@ def apply_prompt_template(agent_name: str, repo_root: str) -> str:
     prompt = DATA_SOURCE_PROMPT_TEMPLATE.format(
         agent_name=agent_name or "Terraform code generate agent",
         skill_items=build_skills(),
-        schema_func_step={SKILLS["schema_func_step"]["description"]},
-        read_func_step={SKILLS["read_func_step"]["description"]},
-        param_and_flatten_func_step={SKILLS["param_and_flatten_func_step"]["description"]},
+        schema_func_step=SKILLS["schema_func_step"]["description"],
+        read_func_step=SKILLS["read_func_step"]["description"],
+        param_and_flatten_func_step=SKILLS["param_and_flatten_func_step"]["description"],
         repo_root=repo_root,
     )
     return prompt

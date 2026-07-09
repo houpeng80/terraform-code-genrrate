@@ -46,5 +46,6 @@ class ToolCacheMiddleware(AgentMiddleware):
             if hasattr(result, 'content'):
                 tool_cache[cache_key] = result.content
                 logger.info(" write tool message to tool cache: tool=%s args=%s", tool_name, tool_args)
+                logger.info("tool result=%s", result.content)
 
         return result

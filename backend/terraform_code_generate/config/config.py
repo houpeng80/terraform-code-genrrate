@@ -18,6 +18,8 @@ class AgentConfig(BaseModel):
     max_tokens: int = Field(default=1024, description="The max tokens of the model")
     timeout: int = Field(default=300, description="The timeout of the model")
     max_retries: int = Field(default=3, description="The max retries of the model")
+    summarization_trigger_messages: int = Field(default=4, description="The messages count when summarization is triggered")
+    summarization_trigger_tokens: int = Field(default=1000, description="The tokens count when summarization is triggered")
     model_type: str = Field(default="deepseek", description="Model type for code generate agent (openai/xiaomi/deepseek/qwen/glm)")
 
     generate_code: bool = Field(default=True, description="Whether generate code (true/false)")
@@ -35,7 +37,7 @@ class AgentConfig(BaseModel):
     doc_fix: bool = Field(default=True, description="Whether fix the doc when the doc should be fixed (true/false)")
     doc_retries: int = Field(default=3, description="The retry times when generate doc")
 
-    execute_type: str = Field(default="graph", description="Plan and execute type for code generate agent (graph/fixed_step/dynamic_step)")
+    execute_type: str = Field(default="dynamic_step", description="Plan and execute type for code generate agent (graph/fixed_step/dynamic_step)")
     print_thinking_process: bool = Field(default=True, description="Whether print the thinking process)")
 
     @classmethod

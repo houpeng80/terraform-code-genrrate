@@ -4,7 +4,7 @@ from backend.terraform_code_generate.agents.code_agent.prompts import SKILLS
 
 @tool
 def skill_load(resource_type: str, skill_name: str):
-    """加载指定技能的详细提示词
+    """加载指定技能的详细提示词时触发
 
     Args:
         resource_type: 资源类型，包括resource和data_source

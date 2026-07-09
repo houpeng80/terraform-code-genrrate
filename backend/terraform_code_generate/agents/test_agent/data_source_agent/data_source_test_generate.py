@@ -42,7 +42,14 @@ class DataSourceTestGenerate(Generate):
             LoggingMiddleware(agent_name=AGENT_NAME),
             TokenUsageMiddleware(agent_name=AGENT_NAME),
             ToolCacheMiddleware(agent_name=AGENT_NAME),
-            ContextSummarizationMiddleware(model=self.model, agent_name=AGENT_NAME),
+            ContextSummarizationMiddleware(
+                model=self.model,
+                agent_name=AGENT_NAME,
+                trigger=[
+                    ("messages", self.agent_config.summarization_trigger_messages),
+                    ("tokens", self.agent_config.summarization_trigger_tokens)
+                ]
+            ),
             TestCheckMiddleware(agent_name=AGENT_NAME, agent_config=self.agent_config),
         ]
         return middlewares

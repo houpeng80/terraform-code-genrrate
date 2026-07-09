@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from langchain_community.chat_models import ChatZhipuAI
 
 from langchain_openai import ChatOpenAI
 from langchain_openai.chat_models.base import BaseChatOpenAI
@@ -51,7 +52,7 @@ def create_code_generate_model(config: AgentConfig) -> BaseChatOpenAI:
         )
     # GLM
     elif config.model_type == "glm":
-        return ChatOpenAI(
+        return ChatZhipuAI(
             model=os.getenv("GLM_MODEL"),
             api_key=os.getenv("GLM_API_KEY"),
             base_url=os.getenv("GLM_BASE_URL"),

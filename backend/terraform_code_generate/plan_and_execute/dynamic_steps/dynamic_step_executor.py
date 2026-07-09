@@ -1,25 +1,17 @@
 import threading
-from typing import Any, List
+from typing import List
 
-from langchain.agents.middleware import AgentMiddleware
 from langchain_core.runnables import RunnableConfig
 from langchain_openai.chat_models.base import BaseChatOpenAI
 from langgraph.types import Checkpointer
 
 from backend.terraform_code_generate.agents.agent_state import CodeAgentState
-from backend.terraform_code_generate.agents.code_agent.data_source_agent.data_source_code_generate import \
-    DataSourceCodeGenerate
-from backend.terraform_code_generate.agents.docs_agents.data_source_agent.data_source_doc_generate import \
-    DataSourceDocGenerate
 from backend.terraform_code_generate.agents.generate import Generate
-from backend.terraform_code_generate.agents.test_agent.data_source_agent.data_source_test_generate import \
-    DataSourceTestGenerate
-from backend.terraform_code_generate.middlewares import LoggingMiddleware, TokenUsageMiddleware, ContextSummarizationMiddleware
 from backend.terraform_code_generate.plan_and_execute.executor import Executor
 
-AGENT_NAME = "fixed_step_executor_agent"
+AGENT_NAME = "dynamic_step_executor_agent"
 
-class FixedStepExecutor(Executor):
+class DynamicStepExecutor(Executor):
     """执行器 - 负责将执行规划期规划的步骤"""
 
     lock = threading.Lock()
@@ -34,7 +26,7 @@ class FixedStepExecutor(Executor):
 
     def execute(self, agent_state: CodeAgentState, steps: List[Generate]) -> CodeAgentState | None:
         """按计划执行任务"""
-        print(f"\n--- begin to execute fixed plan ---")
+        print(f"\n--- begin to execute dynamic step plan: {[step.generate_type for step in steps]} ---")
 
         try:
 
@@ -55,20 +47,12 @@ class FixedStepExecutor(Executor):
                 execute_result = step.generate(agent_state)
                 agent_state = self.update_agent_state(agent_state, execute_result)
 
-            print(f"\n ✅ execute plan complete ")
+            print(f"\n ✅ execute dynamic step plan complete ")
         except Exception as e:
-            print(f"\n ❌ execute plan fail: {e}")
+            print(f"\n ❌ execute dynamic step plan fail: {e}")
             return None
 
         return agent_state
-
-    def build_middlewares(self) -> list[AgentMiddleware]:
-        middlewares: list[AgentMiddleware] = [
-            LoggingMiddleware(agent_name=AGENT_NAME),
-            TokenUsageMiddleware(agent_name=AGENT_NAME),
-            ContextSummarizationMiddleware(model=self.model, agent_name=AGENT_NAME),
-        ]
-        return middlewares
 
     def update_agent_state(self, result_state: CodeAgentState, step_state: CodeAgentState) -> CodeAgentState:
         self.lock.acquire()

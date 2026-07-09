@@ -6,7 +6,6 @@ from langchain_core.tools import BaseTool
 from langchain_openai.chat_models.base import BaseChatOpenAI
 from langgraph.types import Checkpointer
 
-from backend.terraform_code_generate.agents.agent_state import CodeAgentState
 from backend.terraform_code_generate.agents.generate import Generate
 from backend.terraform_code_generate.agents.test_agent.resource_agent.prompt import apply_prompt_template
 from backend.terraform_code_generate.middlewares import RetryCheckMiddleware
@@ -18,7 +17,7 @@ from backend.terraform_code_generate.middlewares.tool_cache_middleware import To
 from backend.terraform_code_generate.tools.deal_file import write_file
 from backend.terraform_code_generate.tools.web_search_and_extract import web_search_and_extract
 
-AGENT_NAME = "data_source_test_generator"
+AGENT_NAME = "resource_test_generator"
 
 class ResourceTestGenerate(Generate):
     def __init__(
@@ -42,7 +41,14 @@ class ResourceTestGenerate(Generate):
             LoggingMiddleware(agent_name=AGENT_NAME),
             TokenUsageMiddleware(agent_name=AGENT_NAME),
             ToolCacheMiddleware(agent_name=AGENT_NAME),
-            ContextSummarizationMiddleware(model=self.model, agent_name=AGENT_NAME),
+            ContextSummarizationMiddleware(
+                model=self.model,
+                agent_name=AGENT_NAME,
+                trigger=[
+                    ("messages", self.agent_config.summarization_trigger_messages),
+                    ("tokens", self.agent_config.summarization_trigger_tokens)
+                ]
+            ),
             TestCheckMiddleware(agent_name=AGENT_NAME, agent_config=self.agent_config),
         ]
         return middlewares

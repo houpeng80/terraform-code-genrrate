@@ -1,4 +1,3 @@
-import uuid
 from typing import Any, List
 
 from langgraph.checkpoint.memory import InMemorySaver
@@ -7,8 +6,11 @@ from langgraph.types import StateT, OutputT
 from langgraph.typing import ContextT, InputT
 
 from backend.terraform_code_generate.agents.agent_state import CodeAgentState
+from backend.terraform_code_generate.agents.generate import Generate
 from backend.terraform_code_generate.config.config import get_app_config
 from backend.terraform_code_generate.models import create_code_generate_model
+from backend.terraform_code_generate.plan_and_execute.dynamic_steps.dynamic_step_executor import DynamicStepExecutor
+from backend.terraform_code_generate.plan_and_execute.dynamic_steps.dynamic_step_planner import DynamicStepPlanner
 from backend.terraform_code_generate.plan_and_execute.dynamic_steps.response import DynamicStepPlannerResponse
 from backend.terraform_code_generate.plan_and_execute.fixed_step.fixed_step_executor import FixedStepExecutor
 from backend.terraform_code_generate.plan_and_execute.fixed_step.fixed_step_planner import FixedStepPlanner
@@ -23,7 +25,7 @@ class GenerateLeader:
         model = create_code_generate_model(agent_config)
         self.model = model
         self.agent_config = agent_config
-        self.config = {"configurable": {"thread_id": "default_checkpointer_thread_id"}}
+        self.config = {"configurable": {"thread_id": "default_checkpointer_thread_id", "user_id": "default_checkpointer_user_id"}}
         self.check_pointer = InMemorySaver()
 
         if self.agent_config.execute_type == "graph":
@@ -33,7 +35,8 @@ class GenerateLeader:
             self.planner = FixedStepPlanner(model, self.config, self.check_pointer, agent_config)
             self.executor = FixedStepExecutor(model, self.config, self.check_pointer)
         elif self.agent_config.execute_type == "dynamic_step":
-            pass
+            self.planner = DynamicStepPlanner(model, self.config, self.check_pointer, agent_config)
+            self.executor = DynamicStepExecutor(model, self.config, self.check_pointer)
         else:
             raise ValueError(f"\n--- 任务终止： 执行任务的类型{self.agent_config.execute_type}不正确，请修改后重试 --- ")
 
@@ -71,11 +74,9 @@ class GenerateLeader:
 
     def execute_with_graph(self, agent_state: CodeAgentState, resource_type:str, graph: StateGraph[StateT, ContextT, InputT, OutputT]) -> CodeAgentState:
         self.agent_state["resource_type"] = resource_type
-
         return self.executor.execute(agent_state, graph)
 
-    def execute_with_steps(self, agent_state: CodeAgentState, resource_type:str, steps: List[str]) -> CodeAgentState:
+    def execute_with_steps(self, agent_state: CodeAgentState, resource_type:str, steps: List[Generate]) -> CodeAgentState:
         self.agent_state["resource_type"] = resource_type
-
         return self.executor.execute(agent_state, steps)
 

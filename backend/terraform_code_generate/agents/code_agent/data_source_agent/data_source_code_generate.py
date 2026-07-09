@@ -6,7 +6,6 @@ from langchain_core.tools import BaseTool
 from langchain_openai.chat_models.base import BaseChatOpenAI
 from langgraph.types import Checkpointer
 
-from backend.terraform_code_generate.agents.agent_state import CodeAgentState
 from backend.terraform_code_generate.agents.code_agent.data_source_agent.prompt import apply_prompt_template
 from backend.terraform_code_generate.agents.generate import Generate
 from backend.terraform_code_generate.middlewares.log_middleware import LoggingMiddleware
@@ -43,7 +42,14 @@ class DataSourceCodeGenerate(Generate):
             LoggingMiddleware(agent_name=AGENT_NAME),
             TokenUsageMiddleware(agent_name=AGENT_NAME),
             ToolCacheMiddleware(agent_name=AGENT_NAME),
-            ContextSummarizationMiddleware(model=self.model, agent_name=AGENT_NAME),
+            ContextSummarizationMiddleware(
+                model=self.model,
+                agent_name=AGENT_NAME,
+                trigger=[
+                    ("messages", self.agent_config.summarization_trigger_messages),
+                    ("tokens", self.agent_config.summarization_trigger_tokens)
+                ]
+            ),
             CodeCheckMiddleware(
                 model=self.model,
                 agent_name=AGENT_NAME,

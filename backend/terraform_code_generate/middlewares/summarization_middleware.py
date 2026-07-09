@@ -44,7 +44,10 @@ class ContextSummarizationMiddleware(SummarizationMiddleware):
             if isinstance(message, HumanMessage):
                 new_messages.append(message)
             elif isinstance(message, ToolMessage) and message.name == "web_search_and_extract":
-                new_messages.append(message)
+                if new_messages.__len__() >= 2:
+                    new_messages[1]=message
+                else:
+                    new_messages.append(message)
 
         new_messages.append(messages[length-2])
         new_messages.append(messages[length-1])

@@ -36,15 +36,29 @@ class CodeCheck:
 
     def code_check(self, agent_state: CodeAgentState) -> BaseModel:
         request_message = agent_state['messages'][0]
+
         user_message = HumanMessage(
             content=f"{request_message}\n\n{agent_state["code_result"]}",
         )
+
+        input_message = {
+            "messages": user_message,
+            "request_message": agent_state["request_message"],
+            "code_retries_time": agent_state["code_retries_time"],
+            "test_retries_time": agent_state["test_retries_time"],
+            "doc_retries_time": agent_state["doc_retries_time"],
+            "input_token_statistics": agent_state["input_token_statistics"],
+            "output_token_statistics": agent_state["output_token_statistics"],
+            "total_token_statistics": agent_state["total_token_statistics"],
+            "current_step": agent_state["current_step"],
+            "resource_type": agent_state["resource_type"],
+        }
 
         agent = self.create_code_check_agent()
 
         try:
             stream = agent.stream(
-                {"messages": [user_message]},
+                input=input_message,
                 config=self.config,
                 stream_mode=["messages", "updates"],
                 version="v2",

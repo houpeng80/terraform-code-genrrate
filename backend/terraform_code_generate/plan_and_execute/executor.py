@@ -24,9 +24,3 @@ class Executor:
 
     def execute(self, agent_state: CodeAgentState, step: Any) -> CodeAgentState | None:
         pass
-
-    def build_middlewares(self) -> list[AgentMiddleware]:
-        pass
-
-    def build_system_prompt_template(self) -> str:
-        pass

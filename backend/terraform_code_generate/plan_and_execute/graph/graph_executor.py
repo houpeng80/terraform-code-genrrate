@@ -1,6 +1,5 @@
 import logging
 
-from langchain.agents.middleware import AgentMiddleware
 from langchain_core.runnables import RunnableConfig
 from langchain_openai.chat_models.base import BaseChatOpenAI
 from langgraph.graph import StateGraph
@@ -8,7 +7,6 @@ from langgraph.types import Checkpointer, StateT, OutputT
 from langgraph.typing import ContextT, InputT
 
 from backend.terraform_code_generate.agents.agent_state import CodeAgentState
-from backend.terraform_code_generate.middlewares import LoggingMiddleware, TokenUsageMiddleware, ContextSummarizationMiddleware
 from backend.terraform_code_generate.plan_and_execute.executor import Executor
 
 logger = logging.getLogger(__name__)
@@ -39,19 +37,11 @@ class GraphExecutor(Executor):
 
             agent.invoke(agent_state, self.config)
 
-            print(f"\n ✅ execute plan complete ")
+            print(f"\n ✅ execute graph plan complete ")
             logger.info(" graph plan execute complete ")
         except Exception as e:
-            print(f"\n ❌ execute plan fail: {e}")
+            print(f"\n ❌ execute graph plan fail: {e}")
             logger.info(" graph plan execute fail: {s} ", e)
             return None
 
         return agent.get_state(self.config).values
-
-    def build_middlewares(self) -> list[AgentMiddleware]:
-        middlewares: list[AgentMiddleware] = [
-            LoggingMiddleware(agent_name=AGENT_NAME),
-            TokenUsageMiddleware(agent_name=AGENT_NAME),
-            ContextSummarizationMiddleware(model=self.model, agent_name=AGENT_NAME),
-        ]
-        return middlewares

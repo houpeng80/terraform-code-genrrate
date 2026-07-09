@@ -27,7 +27,7 @@ func TestAccDataSourceGaussDbDrRelationships_basic(t *testing.T) {
    - PreCheck 只包含 acceptance.TestAccPreCheck(t)
    - ProviderFactories 固定为acceptance.TestAccProviderFactories
    - CheckDestroy 固定为nil
-   - Steps 包含测试步骤，测试步骤包含 Config 和 Check
+   - Steps 测试步骤包含 Config 和 Check
       - Config 为测试配置生成函数，函数名格式为 `testAccDataSource{XXX}_basic`，其中 `{XXX}` 为该API要获取的功能信息，采用驼峰状格式，例如：`testAccDataSourceGaussDbDrRelationships_basic`
       - Check 为测试步骤，共包含三部分：
          1. 测试资源是否存在，测试方法固定为：dc.CheckResourceExists()

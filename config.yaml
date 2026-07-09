@@ -11,7 +11,7 @@ temperature: 0
 # ============================================================================
 # The max_tokens of the model, defaults to 1024
 # ============================================================================
-max_tokens: 4096
+max_tokens: 9192
 
 # ============================================================================
 # The timeout of the model , defaults to 300
@@ -24,10 +24,20 @@ timeout: 600
 max_retries: 20
 
 # ============================================================================
+# The messages count when summarization is triggered, defaults to 6
+# ============================================================================
+summarization_trigger_messages: 6
+
+# ============================================================================
+# The tokens count when summarization is triggered, defaults to 1000
+# ============================================================================
+summarization_trigger_tokens: 2000
+
+# ============================================================================
 # Mode type (openai/xiaomi/deepseek/qwen/glm), defaults to deepseek
 # currently, only OpenAI is supported, Anthropic has not been supported
 # ============================================================================
-model_type: xiaomi
+model_type: deepseek
 
 # ============================================================================
 # Generate code, whether generate code, defaults to true
@@ -37,7 +47,7 @@ generate_code: true
 # ============================================================================
 # Code check, whether check the code when code is generated, defaults to true
 # ============================================================================
-code_check: true
+code_check: false
 
 # ============================================================================
 # Code fix, whether fix the code when the code should be fixed, defaults to true
@@ -90,7 +100,7 @@ doc_fix: true
 doc_retries: 3
 
 # ============================================================================
-# Plan and execute type (graph/fixed_step/dynamic_step), defaults to graph
+# Plan and execute type (graph/fixed_step/dynamic_step), defaults to dynamic_step
 # this model contain plan and execute parts, the plan is used to make plan of the task,
 # and the execute part is used to complete the task.
 #
@@ -100,7 +110,7 @@ doc_retries: 3
 #    in order, because the tasks is planed by the model, the result may not meet the user requirements, a plan check and
 #    replanner is needed
 # ============================================================================
-execute_type: graph
+execute_type: dynamic_step
 
 # ============================================================================
 # Print thinking process, whether print the thinking process, defaults to true

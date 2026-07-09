@@ -47,7 +47,7 @@ class CodeCheckMiddleware(AgentMiddleware[CodeAgentState]):
     def aafter_model(self, state: CodeAgentState, runtime: Runtime) -> dict[str, Any] | None:
         return self.code_check(state)
 
-    def code_check(self, state: CodeAgentState) -> dict | None:
+    def code_check(self, state: CodeAgentState) -> dict[str, Any] | None:
         latest_message = state['messages'][-1]
 
         if not self.agent_config.code_check:
@@ -63,12 +63,12 @@ class CodeCheckMiddleware(AgentMiddleware[CodeAgentState]):
                     "code_result": latest_message.tool_calls[0]['args']["content"],
                 }
             elif "finish_reason" in latest_message.response_metadata and latest_message.response_metadata["finish_reason"] in ["stop", "length"]:
-                if state.resource_type == "resource":
-                    check_result = DataSourceCodeCheck(self.model, self.config, self.checkpointer).code_check(agent_state=state)
-                    fix_message = self.build_data_source_code_review_message(check_result)
-                else:
+                if state["resource_type"] == "resource":
                     check_result = ResourceCodeCheck(self.model, self.config, self.checkpointer).code_check(agent_state=state)
                     fix_message = self.build_resource_code_review_message(check_result)
+                else:
+                    check_result = DataSourceCodeCheck(self.model, self.config, self.checkpointer).code_check(agent_state=state)
+                    fix_message = self.build_data_source_code_review_message(check_result)
 
                 logger.info(f"\ncode check result={fix_message}")
                 print(f"\ncode check result={fix_message}")
@@ -84,7 +84,7 @@ class CodeCheckMiddleware(AgentMiddleware[CodeAgentState]):
                             "jump_to": "model"
                         }
 
-        return None
+        return state
 
     def build_data_source_code_review_message(self, check_result: DataSourceCodeCheckInfo):
         res = ""
@@ -116,4 +116,32 @@ class CodeCheckMiddleware(AgentMiddleware[CodeAgentState]):
         return res
 
     def build_resource_code_review_message(self, check_result: ResourceCodeCheckInfo):
-        return ""
+        res = ""
+        if check_result.contain_description:
+            res = res + f"不要包含 Description\n"
+        if check_result.contain_force_new:
+            res = res + f"不要包含 ForceNew\n"
+        if len(check_result.non_updatable_params_contain_updated_param):
+            items = ""
+            for param in check_result.non_updatable_params_contain_updated_param:
+                items += param + ", "
+            res = res + f"NonUpdatable列表中不要包含参数{items}\n"
+        if len(check_result.non_updatable_params_not_contain_non_updatable_param):
+            items = ""
+            for param in check_result.non_updatable_params_not_contain_non_updatable_param:
+                items += param + ", "
+            res = res + f"NonUpdatable列表中要包含参数{items}\n"
+        if check_result.validation_error:
+            res = res + f"不要包含 ValidateFunc\n"
+        if check_result.bool_type_params_error:
+            res = res + f"bool类型参数要转换为string类型，并且使用ValidateFunc校验\n"
+        if check_result.region_param_error:
+            res = res + f"region参数不正确，要根据服务是否全局决定要不要添加region参数\n"
+        if not check_result.contain_api_comment:
+            res = res + f"缺少API注释\n"
+        if not check_result.contain_import:
+            res = res + f"缺少导入函数\n"
+        if not check_result.contain_import:
+            res = res + f"缺少超时时间n"
+
+        return res

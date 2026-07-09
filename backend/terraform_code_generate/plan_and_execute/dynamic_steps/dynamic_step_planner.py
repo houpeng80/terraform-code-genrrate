@@ -1,10 +1,9 @@
 import logging
-from typing import List, Any
 
 from langchain.agents.middleware import AgentMiddleware
 from langchain_core.runnables import RunnableConfig
 from langchain_openai.chat_models.base import BaseChatOpenAI
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessageChunk
 from langgraph.types import Checkpointer
 
 from backend.terraform_code_generate.agents.agent_state import CodeAgentState
@@ -14,7 +13,6 @@ from backend.terraform_code_generate.agents.code_agent.resource_agent.resource_g
 from backend.terraform_code_generate.agents.docs_agents.data_source_agent.data_source_doc_generate import \
     DataSourceDocGenerate
 from backend.terraform_code_generate.agents.docs_agents.resource_agent.resource_doc_generate import ResourceDocGenerate
-from backend.terraform_code_generate.agents.generate import Generate
 from backend.terraform_code_generate.agents.test_agent.data_source_agent.data_source_test_generate import \
     DataSourceTestGenerate
 from backend.terraform_code_generate.agents.test_agent.resource_agent.resource_test_generate import ResourceTestGenerate
@@ -23,16 +21,10 @@ from backend.terraform_code_generate.middlewares import  LoggingMiddleware, Toke
 from backend.terraform_code_generate.plan_and_execute.dynamic_steps.prompt import PLANNER_PROMPT_TEMPLATE
 from backend.terraform_code_generate.plan_and_execute.dynamic_steps.response import DynamicStepPlannerResponse
 from backend.terraform_code_generate.plan_and_execute.planner import Planner
-from client.generate_test import generate_code
 
 logger = logging.getLogger(__name__)
 
 AGENT_NAME = "dynamic_step_planner_agent"
-
-
-class ReourceDocGenerate:
-    pass
-
 
 class DynamicStepPlanner(Planner):
     """规划器 - 负责将复杂问题分解为简单步骤"""
@@ -50,61 +42,86 @@ class DynamicStepPlanner(Planner):
         """
         生成执行计划
         """
-        print(f"\n--- begin to generate plan ---")
+        print(f"\n--- begin to generate dynamic step plan ---")
 
         try:
+            input_message = {
+                "messages": [HumanMessage(content=agent_state["request_message"])],
+                "input_token_statistics": agent_state["input_token_statistics"],
+                "output_token_statistics": agent_state["output_token_statistics"],
+                "total_token_statistics": agent_state["total_token_statistics"],
+                "current_step": "generating_plan",
+            }
             agent = super().create_planner_agent(DynamicStepPlannerResponse)
 
-            result = agent.invoke(
-                input={
-                    "messages": [HumanMessage(content=agent_state["request_message"])]
-                },
+            stream = agent.stream(
+                input=input_message,
                 config=self.config,
+                stream_mode=["messages", "updates"],
+                version="v2",
             )
+            res = ""
+            for chunk in stream:
+                if self.agent_config.print_thinking_process:
+                    if chunk["type"] == "updates":
+                        for node_name, update in chunk["data"].items():
+                            # 模型请求调用工具
+                            if node_name == "model":
+                                if "structured_response" in update:
+                                    res = update["structured_response"]
+                                elif update["messages"][-1].tool_calls:
+                                    print(
+                                        f"\n[ready to call tool]: name={update['messages'][-1].tool_calls[0]['name']}, args={update['messages'][-1].tool_calls[0]['args']}")
+                            # 工具执行结果
+                            elif node_name == "tools":
+                                print(f"\n[tool return]: result={update['messages'][-1].content}")
+                    elif chunk["type"] == "messages" and chunk["data"] is not None and len(chunk["data"]) > 0:
+                        if isinstance(chunk["data"][0], AIMessageChunk) and chunk["data"][0].content is not None:
+                            print(chunk["data"][0].content, end="", flush=True)
 
-            resource_type = result["structured_response"].resource_type
+            resource_type = res.resource_type
 
-            steps = []
+            execute_steps = []
             if resource_type == "data_source":
-                for step in result["structured_response"].steps:
+                for step in res.steps:
                     if step == "generate_code":
                         if not self.agent_config.generate_code:
                             print(f"\n ❌ {step} is not supported, please change the parameter `generate_code` value to `true` in the file `config.yaml`")
                             raise ValueError(f"not supported step：{step}")
-                        steps.append(DataSourceCodeGenerate(self.model, self.config, self.check_pointer))
+                        execute_steps.append(DataSourceCodeGenerate(self.model, self.config, self.check_pointer))
                     elif step == "generate_test":
                         if not self.agent_config.generate_test:
                             print(f"\n ❌ {step} is not supported, please change the parameter `generate_test` value to `true` in the file `config.yaml`")
                             raise ValueError(f"not supported step：{step}")
-                        steps.append(DataSourceTestGenerate(self.model, self.config, self.check_pointer))
+                        execute_steps.append(DataSourceTestGenerate(self.model, self.config, self.check_pointer))
                     elif step == "generate_doc":
                         if not self.agent_config.generate_doc:
                             print(f"\n ❌ {step} is not supported, please change the parameter `generate_doc` value to `true` in the file `config.yaml`")
                             raise ValueError(f"not supported step：{step}")
-                        steps.append(DataSourceDocGenerate(self.model, self.config, self.check_pointer))
+                        execute_steps.append(DataSourceDocGenerate(self.model, self.config, self.check_pointer))
                     else:
                         print(f"\n ❌ {step} is not supported:")
                         raise ValueError(f"not supported step：{step}")
             elif resource_type == "resource":
-                for step in result["structured_response"].steps:
+                for step in res.steps:
                     if step == "generate_code":
                         if not self.agent_config.generate_code:
                             print(
                                 f"\n ❌ {step} is not supported, please change the parameter `generate_code` value to `true` in the file `config.yaml`")
                             raise ValueError(f"not supported step：{step}")
-                        steps.append(ResourceCodeGenerate(self.model, self.config, self.check_pointer))
+                        execute_steps.append(ResourceCodeGenerate(self.model, self.config, self.check_pointer))
                     elif step == "generate_test":
                         if not self.agent_config.generate_test:
                             print(
                                 f"\n ❌ {step} is not supported, please change the parameter `generate_test` value to `true` in the file `config.yaml`")
                             raise ValueError(f"not supported step：{step}")
-                        steps.append(ResourceTestGenerate(self.model, self.config, self.check_pointer))
+                        execute_steps.append(ResourceTestGenerate(self.model, self.config, self.check_pointer))
                     elif step == "generate_doc":
                         if not self.agent_config.generate_doc:
                             print(
                                 f"\n ❌ {step} is not supported, please change the parameter `generate_doc` value to `true` in the file `config.yaml`")
                             raise ValueError(f"not supported step：{step}")
-                        steps.append(ResourceDocGenerate(self.model, self.config, self.check_pointer))
+                        execute_steps.append(ResourceDocGenerate(self.model, self.config, self.check_pointer))
                     else:
                         print(f"\n ❌ {step} is not supported:")
                         raise ValueError(f"not supported step：{step}")
@@ -114,7 +131,7 @@ class DynamicStepPlanner(Planner):
 
             print(f"\n ✅ generate dynamic plan complete ")
 
-            return DynamicStepPlannerResponse(resource_type=resource_type, steps=steps)
+            return DynamicStepPlannerResponse(resource_type=resource_type, steps=execute_steps)
 
         except Exception as e:
             print(f"\n ❌ generate dynamic plan fail: {e}")
@@ -127,6 +144,13 @@ class DynamicStepPlanner(Planner):
         middlewares: list[AgentMiddleware] = [
             LoggingMiddleware(agent_name=AGENT_NAME),
             TokenUsageMiddleware(agent_name=AGENT_NAME),
-            ContextSummarizationMiddleware(model=self.model, agent_name=AGENT_NAME),
+            ContextSummarizationMiddleware(
+                model=self.model,
+                agent_name=AGENT_NAME,
+                trigger=[
+                    ("messages", self.agent_config.summarization_trigger_messages),
+                    ("tokens", self.agent_config.summarization_trigger_tokens)
+                ]
+            ),
         ]
         return middlewares

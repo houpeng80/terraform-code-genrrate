@@ -1,18 +1,15 @@
 from pathlib import Path
 
-from langchain.agents.middleware import AgentMiddleware, SummarizationMiddleware
+from langchain.agents.middleware import AgentMiddleware
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langchain_openai.chat_models.base import BaseChatOpenAI
 from langgraph.types import Checkpointer
 
-from backend.terraform_code_generate.agents.agent_state import CodeAgentState
 from backend.terraform_code_generate.agents.code_agent.resource_agent.prompt import apply_prompt_template
 from backend.terraform_code_generate.agents.generate import Generate
-from backend.terraform_code_generate.config.config import get_app_config
 from backend.terraform_code_generate.middlewares import LoggingMiddleware, TokenUsageMiddleware, RetryCheckMiddleware, \
     ToolCacheMiddleware, ContextSummarizationMiddleware, CodeCheckMiddleware
-from backend.terraform_code_generate.models import create_code_generate_model
 from backend.terraform_code_generate.tools.deal_file import write_file
 from backend.terraform_code_generate.tools.skill_load import skill_load
 from backend.terraform_code_generate.tools.web_search_and_extract import web_search_and_extract
@@ -41,7 +38,14 @@ class ResourceCodeGenerate(Generate):
             LoggingMiddleware(agent_name=AGENT_NAME),
             TokenUsageMiddleware(agent_name=AGENT_NAME),
             ToolCacheMiddleware(agent_name=AGENT_NAME),
-            ContextSummarizationMiddleware(model=self.model, agent_name=AGENT_NAME),
+            ContextSummarizationMiddleware(
+                model=self.model,
+                agent_name=AGENT_NAME,
+                trigger=[
+                    ("messages", self.agent_config.summarization_trigger_messages),
+                    ("tokens", self.agent_config.summarization_trigger_tokens)
+                ]
+            ),
             CodeCheckMiddleware(
                 model=self.model,
                 agent_name=AGENT_NAME,
