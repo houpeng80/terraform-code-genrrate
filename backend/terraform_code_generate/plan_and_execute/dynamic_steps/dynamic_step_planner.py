@@ -62,6 +62,7 @@ class DynamicStepPlanner(Planner):
             )
             res = ""
             for chunk in stream:
+                # print(chunk)
                 if self.agent_config.print_thinking_process:
                     if chunk["type"] == "updates":
                         for node_name, update in chunk["data"].items():

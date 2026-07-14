@@ -14,7 +14,7 @@ class AgentConfig(BaseModel):
     """Config for the Code generate agent"""
 
     log_level: str = Field(default="info", description="Logging level for code generate agent (debug/info/warning/error)")
-    temperature: int = Field(default=0, description="The temperature of the model")
+    temperature: float = Field(default=0.5, description="The temperature of the model")
     max_tokens: int = Field(default=1024, description="The max tokens of the model")
     timeout: int = Field(default=300, description="The timeout of the model")
     max_retries: int = Field(default=3, description="The max retries of the model")

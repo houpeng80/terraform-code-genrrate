@@ -1,49 +1,42 @@
 from backend.terraform_code_generate.agents.code_agent.resource_agent.create_prompt import \
-    apply_create_prompt_template, CREATE_SKILLS
+    apply_create_prompt_template
 from backend.terraform_code_generate.agents.code_agent.resource_agent.delete_prompt import \
-    apply_delete_prompt_template, DELETE_SKILLS
+    apply_delete_prompt_template
 from backend.terraform_code_generate.agents.code_agent.resource_agent.import_prompt import \
     apply_import_prompt_template
 from backend.terraform_code_generate.agents.code_agent.resource_agent.read_prompt import \
-    apply_read_prompt_template, READ_SKILLS
+    apply_read_prompt_template
 from backend.terraform_code_generate.agents.code_agent.resource_agent.update_prompt import \
-    apply_update_prompt_template, UPDATE_SKILLS
+    apply_update_prompt_template
+from backend.terraform_code_generate.agents.code_agent.resource_agent.utils import build_skills
 
 SKILLS = {
     "create_step" : {
         "name": "create_step",
-        "description": "按照其中的步骤严格执行，生成创建 resource 相关代码",
+        "description": "生成创建resource步骤，当需要生成创建resource相关代码时触发",
         "content": apply_create_prompt_template(),
     },
     "read_step" : {
         "name": "read_step",
-        "description": "按照其中的步骤严格执行，生成查询 resource 相关代码",
+        "description": "生成查询resource步骤，当需要生成查询resource相关代码时触发",
         "content": apply_read_prompt_template(),
     },
     "update_step" : {
         "name": "update_step",
-        "description": "按照其中的步骤严格执行，生成更新 resource 相关代码",
+        "description": "生成更新resource步骤，当需要生成更新resource相关代码时触发",
         "content": apply_update_prompt_template(),
     },
     "delete_step" : {
         "name": "delete_step",
-        "description": "按照其中的步骤严格执行，生成删除 resource 相关代码",
+        "description": "生成删除resource步骤，当需要生成删除resource相关代码时触发",
         "content": apply_delete_prompt_template(),
     },
     "import_step" : {
         "name": "import_step",
-        "description": "按照其中的步骤严格执行，生成导入 resource 相关代码",
+        "description": "生成导入resource步骤，当需要生成导入resource相关代码时触发",
         "content": apply_import_prompt_template()
     }
 }
-
-
-def build_skills(skills: dict[str, dict]) -> str:
-    skill_items = "\n".join(
-        f"    <skill>\n        <name>{skill["name"]}</name>\n        <description>{skill["description"]}</description>\n    </skill>"
-        for name, skill in skills.items()
-    )
-    return skill_items
 
 RESOURCE_PROMPT_TEMPLATE = """
 <role>
@@ -71,15 +64,15 @@ RESOURCE_PROMPT_TEMPLATE = """
 </note>
 
 <step>
-1. 生成创建 resource 相关函数，根据skill返回结果，{create_step}
+1. 生成创建 resource 相关代码
 
-2. 生成查询 resource 相关函数，根据skill返回结果，{read_step}
+2. 生成查询 resource 相关代码
 
-3. 生成更新 resource 相关函数，根据skill返回结果，{update_step}
+3. 生成更新 resource 相关代码
 
-4. 生成删除 resource 函数，{delete_step}
+4. 生成删除 resource 相关代码
 
-5. 生成导入 resource 函数，{import_step}
+5. 生成导入 resource 相关代码
 
 6. 在生成结果前边添加包信息，以及引入所需要的包信息
 
@@ -92,7 +85,7 @@ RESOURCE_PROMPT_TEMPLATE = """
 def apply_prompt_template(agent_name: str, repo_root: str) -> str:
     prompt = RESOURCE_PROMPT_TEMPLATE.format(
         agent_name=agent_name or "Terraform code generate agent",
-        skill_items=build_skills({**SKILLS, **CREATE_SKILLS, **READ_SKILLS, **UPDATE_SKILLS, **DELETE_SKILLS}),
+        skill_items=build_skills(SKILLS),
         create_step=SKILLS["create_step"]["description"],
         read_step=SKILLS["read_step"]["description"],
         update_step=SKILLS["update_step"]["description"],

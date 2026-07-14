@@ -1,3 +1,5 @@
+from backend.terraform_code_generate.agents.code_agent.resource_agent.utils import build_skills
+
 SCHEMA_FUNC_STEP = """
 1. 该函数的名称格式为 `Resource{XXX}`，其中 `{XXX}` 为该资源的功能信息，采用驼峰状格式，例如：`ResourcePublication`
 2. 该函数参数为空，返回值为 `*schema.Resource`
@@ -516,41 +518,45 @@ CREATE_WAIT_FUNC_STEP = """
 CREATE_SKILLS = {
     "schema_func_step" : {
         "name": "schema_func_step",
-        "description": "按照其中的步骤严格执行，生成 schema_func 代码",
+        "description": "生成schema fun步骤，当需要生成schema fun相关代码时触发",
         "content": SCHEMA_FUNC_STEP
     },
     "create_resource_params_step" : {
         "name": "create_resource_params_step",
-        "description": "按照其中的步骤严格执行，生成创建 resource 参数相关代码",
+        "description": "生成创建resource params步骤，当需要生成创建resource params相关代码时触发",
         "content": CREATE_RESOURCE_PARAMS_STEP
     },
     "create_resource_func_step" : {
         "name": "create_resource_func_step",
-        "description": "按照其中的步骤严格执行，生成创建 resource 函数相关代码",
+        "description": "生成创建resource func步骤，当需要生成创建resource func相关代码时触发",
         "content": CREATE_RESOURCE_FUNC_STEP
     },
     "create_wait_func_step" : {
         "name": "create_wait_func_step",
-        "description": "按照其中的步骤严格执行，生成创建等待函数相关代码",
+        "description": "生成wait func步骤，当需要生成wait func相关代码时触发",
         "content": CREATE_WAIT_FUNC_STEP
     },
 }
 
 CREATE_STEP = """
+<available_sub_skills>
+    {skill_items}
+</available_sub_skills>
+
 <step>
 1. 根据用户提供的创建资源API，获取API信息
 
-2. 生成 resource 函数，根据skill返回结果， {schema_func_step}
+2. 生成 schema fun相关代码
 
-3. 添加创建resource的函数，根据skill返回结果，{create_resource_params_step}
+3. 生成 创建resource params相关代码
    
 4. 添加注释
    - 如果支持包周期，那么在`resource函数`前边加两个注释（示例中的`使用到的API`位置）：`@API BSS POST /v2/orders/subscriptions/resources/autorenew/{{instance_id}}`和`@API BSS DELETE /v2/orders/subscriptions/resources/autorenew/{{instance_id}}`
    - 在`resource函数`前边加一个注释（示例中的`使用到的API`位置），格式为`// @API {{service}} {{method}} {{path}}`，其中`{{service}}`为当前服务名，`{{method}}`为URI中的请求方法，`{{path}}`为URI中的请求path
 
-5. 生成创建 resource 的函数 CreateContext，根据skill返回结果，{create_resource_func_step}
+5. 生成创建 resource func相关代码
    
-6. 生成等待任务函数，根据skill返回结果，{create_wait_func_step}
+6. 生成wait_func相关代码
 
 7. 添加等待时间
    - 在`resource函数`中添加创建资源等待时间（示例中的`超时时间`位置）
@@ -566,6 +572,7 @@ CREATE_STEP = """
 
 def apply_create_prompt_template() -> str:
     prompt = CREATE_STEP.format(
+        skill_items=build_skills(CREATE_SKILLS),
         schema_func_step=CREATE_SKILLS["schema_func_step"]["description"],
         create_resource_params_step=CREATE_SKILLS["create_resource_params_step"]["description"],
         create_resource_func_step=CREATE_SKILLS["create_resource_func_step"]["description"],

@@ -1,3 +1,5 @@
+from backend.terraform_code_generate.agents.code_agent.resource_agent.utils import build_skills
+
 READ_RESOURCE_PARAMS_STEP = """
 1. 如果API不是分页接口
 
@@ -496,27 +498,31 @@ READ_RESOURCE_PARAM_AND_FLATTEN_FUNC_STEP = """
 READ_SKILLS = {
     "read_resource_params_step" : {
         "name": "read_resource_params_step",
-        "description": "按照其中的步骤严格执行，生成查询resource的参数",
+        "description": "生成查询resource params步骤，当需要生成查询resource params相关代码时触发",
         "content": READ_RESOURCE_PARAMS_STEP
     },
     "read_resource_func_step" : {
         "name": "read_resource_func_step",
-        "description": "按照其中的步骤严格执行，生成查询resource函数代码",
+        "description": "生成查询resource func步骤，当需要生成查询resource func相关代码时触发",
         "content": READ_RESOURCE_FUNC_STEP
     },
     "set_field_func_step" : {
         "name": "set_field_func_step",
-        "description": "按照其中的步骤严格执行，生成设置其他API查询参数代码",
+        "description": "生成设置其他API查询参数步骤，当需要生成设置其他API查询参数相关代码时触发",
         "content": SET_FIELD_FUNC_STEP
     },
     "read_resource_param_and_flatten_func_step" : {
         "name": "read_resource_param_and_flatten_func_step",
-        "description": "按照其中的步骤严格执行，生成参数函数、请求体函数、解析结果函数",
+        "description": "生成参数函数、请求体函数、解析结果函数步骤，当需要生成 参数函数、请求体函数、解析结果函数 相关代码时触发",
         "content": READ_RESOURCE_PARAM_AND_FLATTEN_FUNC_STEP
     },
 }
 
 READ_STEP = """
+<available_sub_skills>
+    {skill_items}
+</available_sib_skills>
+
 <step>
 1. 如果没有提供查询资源API，那么就生成一个空函数：
    - 格式为`resource{{XXX}}Read`，其中 `{{XXX}}` 为该资源的功能信息，例如：`resourcePublicationRead`
@@ -530,21 +536,22 @@ READ_STEP = """
 2. 如果提供了查询资源API：
    2.1 根据用户提供的查询资源API，获取API信息
    
-   2.2 生成查询resource的参数，根据skill返回结果，{read_resource_params_step}
+   2.2 生成查询 resource params相关代码
       
    2.3 添加注释
       - 在`resource函数`前边加一个注释（示例中的`使用到的API`位置），格式为`// @API {{service}} {{method}} {{path}}`，其中`{{service}}`为当前服务名，`{{method}}`为URI中的请求方法，`{{path}}`为URI中的请求path
    
-   2.4 生成查询resource函数，根据skill返回结果，{read_resource_func_step}
+   2.4 生成查询resource func相关代码
       
-   2.5 设置其他API查询参数，根据skill返回结果，{set_field_func_step}
+   2.5 设置其他API查询参数相关代码
       
-   2.6 生成参数函数、请求体函数、解析结果函数，根据skill返回结果，{read_resource_param_and_flatten_func_step}
+   2.6 生成参数函数、请求体函数、解析结果函数
 </step>
 """
 
 def apply_read_prompt_template() -> str:
     prompt = READ_STEP.format(
+        skill_items=build_skills(READ_SKILLS),
         read_resource_params_step=READ_SKILLS["read_resource_params_step"]["description"],
         read_resource_func_step=READ_SKILLS["read_resource_func_step"]["description"],
         set_field_func_step=READ_SKILLS["set_field_func_step"]["description"],

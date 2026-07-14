@@ -1,7 +1,8 @@
 import logging
 
 from langchain.agents.middleware import SummarizationMiddleware
-from langchain_core.messages import HumanMessage, ToolMessage, AIMessage
+from langchain_core.messages import HumanMessage, ToolMessage, AIMessage, RemoveMessage
+from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from langgraph.runtime import Runtime
 
 from backend.terraform_code_generate.agents.agent_state import CodeAgentState
@@ -40,20 +41,43 @@ class ContextSummarizationMiddleware(SummarizationMiddleware):
         if length < 4:
             return None
 
+        # elif isinstance(message, ToolMessage) and message.name == "web_search_and_extract":
+        #     if new_messages.__len__() >= 2:
+        #         new_messages[1] = message
+        #     else:
+        #         new_messages.append(message)
+        # 只保留最后的一个 ai_message 和 tool_message
+        ai_message = None
+        tool_message = None
+        last_message = None
+        i = 0
         for message in messages:
+            if i == length - 1:
+                break
             if isinstance(message, HumanMessage):
                 new_messages.append(message)
-            elif isinstance(message, ToolMessage) and message.name == "web_search_and_extract":
-                if new_messages.__len__() >= 2:
-                    new_messages[1]=message
+            elif isinstance(message, AIMessage):
+                if i == length - 1:
+                    last_message = message
                 else:
-                    new_messages.append(message)
+                    ai_message = message
+            elif isinstance(message, ToolMessage):
+                tool_message = message
 
-        new_messages.append(messages[length-2])
-        new_messages.append(messages[length-1])
+        new_messages.append(ai_message)
+        new_messages.append(tool_message)
+        if last_message is not None:
+            new_messages.append(last_message)
+
+        # new_messages.append(messages[length-2])
+        # new_messages.append(messages[length-1])
+        print(f"{new_messages}")
 
         logger.info(f" end summarization the context message, messages length: {new_messages.__len__()}")
 
         return {
-            "messages": [*new_messages]
+            "messages": [
+                RemoveMessage(id=REMOVE_ALL_MESSAGES),
+                *new_messages
+            ]
         }

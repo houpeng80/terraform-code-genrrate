@@ -1,3 +1,5 @@
+from backend.terraform_code_generate.agents.code_agent.resource_agent.utils import build_skills
+
 SCHEMA_FUNC_STEP = """
 1. 该函数的名称格式为 `DataSource{XXX}`，其中 `{XXX}` 为该API要获取的功能信息，采用驼峰状格式，例如：`DataSourceBackupDatabases`
 2. 如果用户提供了资源名，就从资源名中提取资源信息
@@ -415,17 +417,17 @@ PARAM_AND_FLATTEN_FUNC_STEP = """
 SKILLS = {
     "schema_func_step" : {
         "name": "schema_func_step",
-        "description": "按照其中的步骤严格执行，生成对应 schema_func 代码",
+        "description": "生成schema func步骤，当需要生成schema func相关代码时触发",
         "content": SCHEMA_FUNC_STEP
     },
     "read_func_step" : {
         "name": "read_func_step",
-        "description": "按照其中的步骤严格执行，生成对应 ReadContext 代码",
+        "description": "生成read func步骤，当需要生成read func相关代码时触发",
         "content": READ_FUNC_STEP
     },
     "param_and_flatten_func_step" : {
         "name": "param_and_flatten_func_step",
-        "description": "按照其中的步骤严格执行，生成对应 param and flatten 代码",
+        "description": "生成param and flatten步骤，当需要生成param and flatten相关代码时触发",
         "content": PARAM_AND_FLATTEN_FUNC_STEP
     }
 }
@@ -458,11 +460,11 @@ DATA_SOURCE_PROMPT_TEMPLATE = """
 1. 数据获取
   根据用户提供的API地址获取网页信息
 
-2. 生成 schema_func，根据skill返回结果，{schema_func_step}
+2. 生成schema func相关代码
 
-3. 生成 ReadContext，根据skill返回结果，{read_func_step}
+3. 生成read func相关代码
 
-4. 生成 param_and_flatten_func，根据skill返回结果，{param_and_flatten_func_step}
+4. 生成param and flatten相关代码
 
 5. 在生成结果前边添加包信息，以及引入所需要的包信息
 
@@ -472,17 +474,10 @@ DATA_SOURCE_PROMPT_TEMPLATE = """
 </step>
 """
 
-def build_skills() -> str:
-    skill_items = "\n".join(
-        f"    <skill>\n        <name>{skill["name"]}</name>\n        <description>{skill["description"]}</description>\n    </skill>"
-        for name, skill in SKILLS.items()
-    )
-    return skill_items
-
 def apply_prompt_template(agent_name: str, repo_root: str) -> str:
     prompt = DATA_SOURCE_PROMPT_TEMPLATE.format(
         agent_name=agent_name or "Terraform code generate agent",
-        skill_items=build_skills(),
+        skill_items=build_skills(SKILLS),
         schema_func_step=SKILLS["schema_func_step"]["description"],
         read_func_step=SKILLS["read_func_step"]["description"],
         param_and_flatten_func_step=SKILLS["param_and_flatten_func_step"]["description"],

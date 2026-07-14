@@ -1,3 +1,5 @@
+from backend.terraform_code_generate.agents.code_agent.resource_agent.utils import build_skills
+
 UNSUBSCRIBE_ONLY_STEP = """
 1. 生成删除资源的函数
    - 生成一个删除资源的函数，格式为`resource{XXX}Delete`，其中 `{XXX}` 为该资源的功能信息，例如：`resourceInstanceDelete`
@@ -236,22 +238,26 @@ DELETE_AND_UNSUBSCRIBE_STEP = """
 DELETE_SKILLS = {
     "unsubscribe_only_step" : {
         "name": "unsubscribe_only_step",
-        "description": "按照其中的步骤严格执行，生成只退订资源代码",
+        "description": "只生成退订resource步骤，当需要只生成退订resource相关代码时触发",
         "content": UNSUBSCRIBE_ONLY_STEP
     },
     "delete_only_step" : {
         "name": "delete_only_step",
-        "description": "按照其中的步骤严格执行，生成只删除资源代码",
+        "description": "只生成删除resource步骤，当需要只生成删除resource相关代码时触发",
         "content": DELETE_ONLY_STEP
     },
     "delete_and_unsubscribe_step" : {
         "name": "delete_and_unsubscribe_step",
-        "description": "按照其中的步骤严格执行，生成退订很删除资源代码",
+        "description": "生成退订和删除resource步骤，当需要生成退订和删除resource相关代码时触发",
         "content": DELETE_AND_UNSUBSCRIBE_STEP
     },
 }
 
 DELETE_STEP = """
+<available_sub_skills>
+    {skill_items}
+</available_sib_skills>
+
 <step>
 1. 如果没有提供删除API，并且没有包周期参数
    - 生成一个返回warn信息的函数，格式为`resource{{XXX}}Delete`，其中 `{{XXX}}` 为该资源的功能信息，例如：`resourcePublicationDelete`
@@ -266,16 +272,17 @@ DELETE_STEP = """
    	  }}
    }}
 
-2. 如果没有提供删除API，但是有包周期参数，根据skill返回结果，{unsubscribe_only_step}
+2. 如果没有提供删除API，但是创建resource API 有包周期参数，只生成退订resource相关代码
 
-3. 如果有提供删除API，但是没有包周期参数，根据skill返回结果，{delete_only_step}
+3. 如果有提供删除API，但是创建resource API没有包周期参数，只生成删除resource相关代码
 
-4. 如果有提供删除APi，同时也有包周期参数，根据skill返回结果，{delete_and_unsubscribe_step}
+4. 如果有提供删除APi，同时创建resource API也有包周期参数，生成退订和删除resource相关代码
 </step>
 """
 
 def apply_delete_prompt_template() -> str:
     prompt = DELETE_STEP.format(
+        skill_items=build_skills(DELETE_SKILLS),
         unsubscribe_only_step=DELETE_SKILLS["unsubscribe_only_step"]["description"],
         delete_only_step=DELETE_SKILLS["delete_only_step"]["description"],
         delete_and_unsubscribe_step=DELETE_SKILLS["delete_and_unsubscribe_step"]["description"],

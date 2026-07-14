@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import override, Any
 from collections.abc import  Callable
 
@@ -29,7 +30,7 @@ elif log_level == "error" :
 logging.basicConfig(level=logging_level,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     encoding='utf-8',
-                    filename='D:\\projects\\python_projects\\terraform_code_generate\\code_generate.log')
+                    filename=Path(__file__).parents[3] / "code_generate.log")
 logger = logging.getLogger(__name__)
 
 class LoggingMiddleware(AgentMiddleware):

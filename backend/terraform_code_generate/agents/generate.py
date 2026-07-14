@@ -3,7 +3,8 @@ from langchain.agents.middleware import AgentMiddleware
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langchain_openai.chat_models.base import BaseChatOpenAI
-from langchain_core.messages import HumanMessage, AIMessageChunk
+from langchain_core.messages import HumanMessage, AIMessageChunk, RemoveMessage
+from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from langgraph.types import Checkpointer
 
 from backend.terraform_code_generate.agents.agent_state import CodeAgentState
@@ -25,7 +26,7 @@ class Generate:
 
     def generate(self, agent_state: CodeAgentState) -> CodeAgentState:
         input_message = {
-            "messages": [HumanMessage(content=agent_state["request_message"])],
+            "messages": [RemoveMessage(id=REMOVE_ALL_MESSAGES), HumanMessage(content=agent_state["request_message"])],
             "request_message": agent_state["request_message"],
             "code_retries_time": agent_state["code_retries_time"],
             "test_retries_time": agent_state["test_retries_time"],
@@ -68,6 +69,8 @@ class Generate:
 
         state = agent.get_state(self.config).values
         state["current_step"] = generate_result
+        print("=====================================================")
+        print(f"{state}")
         return state
 
     def create_generate_agent(self):

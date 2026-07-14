@@ -25,7 +25,7 @@ class GenerateLeader:
         model = create_code_generate_model(agent_config)
         self.model = model
         self.agent_config = agent_config
-        self.config = {"configurable": {"thread_id": "default_checkpointer_thread_id", "user_id": "default_checkpointer_user_id"}}
+        self.config = {"configurable": {"thread_id": "default_thread_id", "user_id": "default_user_id"}}
         self.check_pointer = InMemorySaver()
 
         if self.agent_config.execute_type == "graph":

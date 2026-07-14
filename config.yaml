@@ -4,9 +4,9 @@
 log_level: info
 
 # ============================================================================
-# The temperature of the model, defaults to 0
+# The temperature of the model, defaults to 0.5
 # ============================================================================
-temperature: 0
+temperature: 0.3
 
 # ============================================================================
 # The max_tokens of the model, defaults to 1024
@@ -31,13 +31,13 @@ summarization_trigger_messages: 6
 # ============================================================================
 # The tokens count when summarization is triggered, defaults to 1000
 # ============================================================================
-summarization_trigger_tokens: 2000
+summarization_trigger_tokens: 5000
 
 # ============================================================================
 # Mode type (openai/xiaomi/deepseek/qwen/glm), defaults to deepseek
 # currently, only OpenAI is supported, Anthropic has not been supported
 # ============================================================================
-model_type: deepseek
+model_type: xiaomi
 
 # ============================================================================
 # Generate code, whether generate code, defaults to true

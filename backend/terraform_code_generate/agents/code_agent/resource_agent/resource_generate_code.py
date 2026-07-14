@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from langchain.agents.middleware import AgentMiddleware
+from langchain.agents.middleware import AgentMiddleware, TodoListMiddleware, SummarizationMiddleware
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langchain_openai.chat_models.base import BaseChatOpenAI
@@ -9,9 +9,9 @@ from langgraph.types import Checkpointer
 from backend.terraform_code_generate.agents.code_agent.resource_agent.prompt import apply_prompt_template
 from backend.terraform_code_generate.agents.generate import Generate
 from backend.terraform_code_generate.middlewares import LoggingMiddleware, TokenUsageMiddleware, RetryCheckMiddleware, \
-    ToolCacheMiddleware, ContextSummarizationMiddleware, CodeCheckMiddleware
+    ToolCacheMiddleware, CodeCheckMiddleware
 from backend.terraform_code_generate.tools.deal_file import write_file
-from backend.terraform_code_generate.tools.skill_load import skill_load
+from backend.terraform_code_generate.tools.skill_load import skill_load, sub_skill_load
 from backend.terraform_code_generate.tools.web_search_and_extract import web_search_and_extract
 
 AGENT_NAME = "resource_code_generator"
@@ -38,14 +38,15 @@ class ResourceCodeGenerate(Generate):
             LoggingMiddleware(agent_name=AGENT_NAME),
             TokenUsageMiddleware(agent_name=AGENT_NAME),
             ToolCacheMiddleware(agent_name=AGENT_NAME),
-            ContextSummarizationMiddleware(
+            SummarizationMiddleware(
                 model=self.model,
-                agent_name=AGENT_NAME,
                 trigger=[
                     ("messages", self.agent_config.summarization_trigger_messages),
                     ("tokens", self.agent_config.summarization_trigger_tokens)
-                ]
+                ],
             ),
+            TodoListMiddleware(),
+            # TodoMiddleware(agent_name=AGENT_NAME),
             CodeCheckMiddleware(
                 model=self.model,
                 agent_name=AGENT_NAME,
@@ -57,7 +58,7 @@ class ResourceCodeGenerate(Generate):
         return middlewares
 
     def build_tools(self) -> list[BaseTool]:
-        return [web_search_and_extract, skill_load, write_file]
+        return [web_search_and_extract, skill_load, sub_skill_load, write_file]
 
     def get_generate_type(self) -> str:
         return self.generate_type

@@ -1,3 +1,4 @@
+from backend.terraform_code_generate.agents.code_agent.resource_agent.utils import build_skills
 
 UPDATE_RESOURCE_FUNC_STEP = """
 1. 生成 UpdateContext 函数
@@ -225,17 +226,21 @@ UPDATE_PARAMS_FUNC_STEP = """
 UPDATE_SKILLS = {
     "update_resource_func_step" : {
         "name": "update_resource_func_step",
-        "description": "按照其中的步骤严格执行，生成更新resource的函数代码",
+        "description": "生成更新resource func步骤，当需要生成更新resource func相关代码时触发",
         "content": UPDATE_RESOURCE_FUNC_STEP
     },
     "update_params_func_step" : {
         "name": "update_params_func_step",
-        "description": "按照其中的步骤严格执行，生成更新params的函数代码",
+        "description": "生成更新resource params步骤，当需要生成更新resource params相关代码时触发",
         "content": UPDATE_PARAMS_FUNC_STEP
     },
 }
 
 UPDATE_STEP = """
+<available_sub_skills>
+    {skill_items}
+</available_sib_skills>
+
 <step>
 1. 如果没有提供更新API，并且参数中没有 `enterprise_project_id`、 `tags`和 `auto_renew`：
    - 生成一个空函数，格式为`resource{{XXX}}Update`，其中 `{{XXX}}` 为该资源的功能信息，例如：`resourcePublicationUpdate`
@@ -247,9 +252,9 @@ UPDATE_STEP = """
    ```
 
 2. 如果提供了更新API，或者有 `enterprise_project_id`、 `tags`和 `auto_renew` 至少一个参数：
-   2.1 添加更新resource的函数，根据skill返回结果，{update_resource_func_step}
+   2.1 生成更新resource func相关代码
 
-   2.2 添加更新params的函数，根据skill返回结果，{update_params_func_step}
+   2.2 生成更新resource func params相关代码
    
    2.3 添加不支持更新的参数列表
       - 如果创建API的参数（包含URI参数和请求参数）不被更新API支持更新，那么该参数不支持更新，那么就在`resource函数`中添加不支持修改的参数列表（示例中的`不支持修改的参数列表`位置），类型为字符串数组
@@ -283,6 +288,7 @@ UPDATE_STEP = """
 
 def apply_update_prompt_template() -> str:
     prompt = UPDATE_STEP.format(
+        skill_items=build_skills(UPDATE_SKILLS),
         update_resource_func_step=UPDATE_SKILLS["update_resource_func_step"]["description"],
         update_params_func_step=UPDATE_SKILLS["update_params_func_step"]["description"],
     )

@@ -7,5 +7,9 @@ from backend.terraform_code_generate.agents.code_agent.resource_agent.update_pro
 
 SKILLS = {
     "data_source":DATA_SOURCE_SKILLS,
-    "resource": {**RESOURCE_SKILLS, **CREATE_SKILLS, **READ_SKILLS, **UPDATE_SKILLS, **DELETE_SKILLS},
+    "resource":RESOURCE_SKILLS,
+}
+
+SUB_SKILLS = {
+    "resource": {**CREATE_SKILLS, **READ_SKILLS, **UPDATE_SKILLS, **DELETE_SKILLS},
 }
