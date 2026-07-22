@@ -1,11 +1,10 @@
 import uuid
 
-from langchain.chat_models import init_chat_model
 from langgraph.checkpoint.memory import InMemorySaver
-from openai import OpenAI
 
 from backend.terraform_code_generate.agents.code_agent.data_source_agent.data_source_code_generate import \
     DataSourceCodeGenerate
+from backend.terraform_code_generate.agents.code_agent.resource_agent.resource_generate_code import ResourceCodeGenerate
 from backend.terraform_code_generate.agents.docs_agents.data_source_agent.data_source_doc_generate import \
     DataSourceDocGenerate
 from backend.terraform_code_generate.agents.test_agent.data_source_agent.data_source_test_generate import \
@@ -30,22 +29,25 @@ from backend.terraform_code_generate.plan_and_execute.graph.graph_planner import
 #     result = code_check.code_check(agentState)
 #     print(result)
 
-def generate_code(message: str):
+def generate_data_source_code(message: str):
     app_config = get_app_config()
     test_model = create_code_generate_model(app_config)
-    runnable_config = {"configurable": {"thread_id": str(uuid.uuid4()), "checkpoint_id": str(uuid.uuid4())}}
+    runnable_config = {"configurable": {"thread_id": str(uuid.uuid4())}}
     checkpointer = InMemorySaver()
     agentState = {
         "request_message": message,
         "code_retries_time": 0,
         "test_retries_time": 0,
         "doc_retries_time": 0,
+        "input_token_statistics": 0,
+        "output_token_statistics": 0,
+        "total_token_statistics": 0,
         "current_step": "generate_code",
         "resource_type": "data_source"
     }
 
     code_generator = DataSourceCodeGenerate(test_model, runnable_config, checkpointer)
-    code_generator.generate(agentState)
+    return code_generator.generate(agentState)
 
 def generate_test(message: str):
     app_config = get_app_config()
@@ -82,6 +84,26 @@ def generate_doc(message: str):
 
     code_generator = DataSourceDocGenerate(test_model, runnable_config, checkpointer)
     code_generator.generate(agentState)
+
+def generate_resource_code(message: str):
+    app_config = get_app_config()
+    test_model = create_code_generate_model(app_config)
+    runnable_config = {"configurable": {"thread_id": str(uuid.uuid4())}}
+    checkpointer = InMemorySaver()
+    agentState = {
+        "request_message": message,
+        "code_retries_time": 0,
+        "test_retries_time": 0,
+        "doc_retries_time": 0,
+        "input_token_statistics": 0,
+        "output_token_statistics": 0,
+        "total_token_statistics": 0,
+        "current_step": "generate_code",
+        "resource_type": "resource"
+    }
+
+    code_generator = ResourceCodeGenerate(test_model, runnable_config, checkpointer)
+    return code_generator.generate(agentState)
 
 def planner_plan(message: str):
     app_config = get_app_config()
@@ -140,68 +162,122 @@ def generate(message: str):
     leader.run(message)
 
 if __name__ == "__main__":
-    data_source_gaussdb = """
-    根据API：https://support.huaweicloud.com/intl/zh-cn/api-gaussdb/gaussdb_api_524.html，帮我生成一个data source
-    """
+    # data_source_gaussdb = """
+    # 根据API：https://support.huaweicloud.com/intl/zh-cn/api-gaussdb/gaussdb_api_524.html，帮我生成一个data source
+    # """
+    #
+    # data_source_gaussdb_post = """
+    #     根据API：https://support.huaweicloud.com/api-gaussdb/gaussdb_api_314.html，帮我生成一个data source
+    #     """
+    #
+    # data_source_dcs = """
+    # 根据API：https://support.huaweicloud.com/api-dcs/ListBigkeyScanTasks.html，帮我生成一个data source
+    # """
 
-    data_source_gaussdb_post = """
-        根据API：https://support.huaweicloud.com/api-gaussdb/gaussdb_api_314.html，帮我生成一个data source
+    resource_gaussdb_lts = """
+        根据以下API，帮我生成一个resource:
+创建API：https://support.huaweicloud.com/api-gaussdb/gaussdb_api_525.html
+修改API：https://support.huaweicloud.com/api-gaussdb/gaussdb_api_525.html
+查询API：https://support.huaweicloud.com/api-gaussdb/gaussdb_api_524.html
+删除API：https://support.huaweicloud.com/api-gaussdb/gaussdb_api_526.html
+查询任务API：https://support.huaweicloud.com/api-gaussdb/gaussdb_api_129.html
         """
 
-    data_source_dcs = """
-    根据API：https://support.huaweicloud.com/api-dcs/ListBigkeyScanTasks.html，帮我生成一个data source
+#     resource_rds_instance = """
+#             根据以下API，帮我生成一个resource:
+# 创建API：https://support.huaweicloud.com/api-rds/rds_01_0002.html
+# 查询API：https://support.huaweicloud.com/api-rds/rds_01_0004.html
+# 查询binlog_retention_hours的API：https://support.huaweicloud.com/api-rds/rds_06_0102.html
+# 查询seconds_level_monitoring_enabled和seconds_level_monitoring_interval的API：https://support.huaweicloud.com/api-rds/rds_06_0102.html
+# 修改name的API：https://support.huaweicloud.com/api-rds/rds_05_0005.html
+# 修改description的API：https://support.huaweicloud.com/api-rds/rds_05_0021.html，创建资源后就触发更新
+# 修改flavor的API：https://support.huaweicloud.com/api-rds/rds_01_0101.html
+# 修改port的API：https://support.huaweicloud.com/api-rds/rds_05_0018.html
+# 修改binlog_retention_hours的API：https://support.huaweicloud.com/api-rds/rds_06_0101.html，创建资源后就触发更新
+# 修改seconds_level_monitoring_enabled和seconds_level_monitoring_interval的API：https://support.huaweicloud.com/api-rds/rds_06_0101.html，创建资源后就触发更新
+# 删除API：https://support.huaweicloud.com/api-rds/rds_01_0003.html
+# 查询任务API：https://support.huaweicloud.com/api-rds/rds_08_0001.html
+# 导入信息id格式：<instance_id>/<id>
+#             """
+
+    resource_rds_instance = """
+    根据以下API，帮我生成一个resource:
+    创建API：https://support.huaweicloud.com/api-rds/rds_01_0002.html
+    查询API：https://support.huaweicloud.com/api-rds/rds_01_0004.html
+    修改name的API：https://support.huaweicloud.com/api-rds/rds_05_0005.html
+    修改description的API：https://support.huaweicloud.com/api-rds/rds_05_0021.html，创建资源后就触发更新
+    删除API：https://support.huaweicloud.com/api-rds/rds_01_0003.html
+    查询任务API：https://support.huaweicloud.com/api-rds/rds_08_0001.html
+                """
+
+    geminidb_account = """
+    请根据以下API，帮我生成一个resource:
+创建API：https://support.huaweicloud.com/api-nosql/nosql_06_0010.html
+查询API：https://support.huaweicloud.com/api-nosql/nosql_06_0014.html
+修改privilege和databases的API：https://support.huaweicloud.com/api-nosql/nosql_06_0011.html
+修改password的API：https://support.huaweicloud.com/api-nosql/nosql_06_0012.html
+删除API：https://support.huaweicloud.com/api-nosql/nosql_06_0013.html
+查询任务API：https://support.huaweicloud.com/api-nosql/nosql_10_0100.html
+资源id使用instance_id和name
+导入信息id格式：<instance_id>/<id>
     """
+
+    res = generate_resource_code(geminidb_account)
+    print("===================================")
+    print(res)
 
 
     apis = [
 
         # rds
-        "https://support.huaweicloud.com/api-rds/rds_01_0004.html",
-        "https://support.huaweicloud.com/api-rds/rds_12_0014.html",
-        "https://support.huaweicloud.com/api-rds/rds_12_0016.html",
-        "https://support.huaweicloud.com/api-rds/rds_12_0010.html",
-        "https://support.huaweicloud.com/api-rds/rds_09_0017.html",
-        "https://support.huaweicloud.com/api-rds/rds_08_0039.html",
-        "https://support.huaweicloud.com/api-rds/rds_06_0056.html",
-        "https://support.huaweicloud.com/api-rds/rds_06_0077.html",
+        # "https://support.huaweicloud.com/api-rds/rds_01_0004.html",
+        # "https://support.huaweicloud.com/api-rds/rds_12_0014.html",
+        # "https://support.huaweicloud.com/api-rds/rds_12_0016.html",
+        # "https://support.huaweicloud.com/api-rds/rds_12_0010.html",
+        # "https://support.huaweicloud.com/api-rds/rds_09_0017.html",
+        # "https://support.huaweicloud.com/api-rds/rds_08_0039.html",
+        # "https://support.huaweicloud.com/api-rds/rds_06_0056.html",
+        # "https://support.huaweicloud.com/api-rds/rds_06_0077.html",
 
         # dcs
-        "https://support.huaweicloud.com/api-dcs/ListInstances.html",
-        "https://support.huaweicloud.com/api-dcs/ShowNodesInformation.html",
-        "https://support.huaweicloud.com/api-dcs/ListMigrationTask.html",
-        "https://support.huaweicloud.com/api-dcs/ListBackgroundTask.html",
-        "https://support.huaweicloud.com/api-dcs/ListRedislog.html",
+        # "https://support.huaweicloud.com/api-dcs/ListInstances.html",
+        # "https://support.huaweicloud.com/api-dcs/ShowNodesInformation.html",
+        # "https://support.huaweicloud.com/api-dcs/ListMigrationTask.html",
+        # "https://support.huaweicloud.com/api-dcs/ListBackgroundTask.html",
+        # "https://support.huaweicloud.com/api-dcs/ListRedislog.html",
 
         # dds
-        "https://support.huaweicloud.com/api-dds/dds_connect_0002.html",
-        "https://support.huaweicloud.com/api-dds/dds_api_0266.html",
+        # "https://support.huaweicloud.com/api-dds/dds_connect_0002.html",
+        # "https://support.huaweicloud.com/api-dds/dds_api_0266.html",
 
         # elb
-        "https://support.huaweicloud.com/api-elb/ListListeners.html",
-        "https://support.huaweicloud.com/api-elb/ListLoadBalancers.html",
+        # "https://support.huaweicloud.com/api-elb/ListListeners.html",
+        # "https://support.huaweicloud.com/api-elb/ListLoadBalancers.html",
 
         # vpn
-        "https://support.huaweicloud.com/api-vpn/vpn_api_0023.html",
+        # "https://support.huaweicloud.com/api-vpn/vpn_api_0023.html",
 
         # gaussdb
-        "https://support.huaweicloud.com/api-gaussdb/gaussdb_api_301.html",
-        "https://support.huaweicloud.com/api-gaussdb/gaussdb_api_107.html",
-        "https://support.huaweicloud.com/api-gaussdb/gaussdb_api_314.html",
+        # "https://support.huaweicloud.com/api-gaussdb/gaussdb_api_301.html",
+        # "https://support.huaweicloud.com/api-gaussdb/gaussdb_api_107.html",
+        # "https://support.huaweicloud.com/api-gaussdb/gaussdb_api_314.html",
 
         # geminidb
-        "https://support.huaweicloud.com/api-nosql/nosql_05_0054.html",
-        "https://support.huaweicloud.com/api-nosql/nosql_05_0068.html",
+        # "https://support.huaweicloud.com/api-nosql/nosql_05_0054.html",
+        # "https://support.huaweicloud.com/api-nosql/nosql_05_0068.html",
 
         # taurusdb
-        "https://support.huaweicloud.com/api-taurusdb/ListParamsTemplateApplyHistory.html",
-        "https://support.huaweicloud.com/api-taurusdb/ShowSlowLogStatistics.html",
-        "https://support.huaweicloud.com/api-taurusdb/ListAuditLogs.html",
+        # "https://support.huaweicloud.com/api-taurusdb/ListParamsTemplateApplyHistory.html",
+        # "https://support.huaweicloud.com/api-taurusdb/ShowSlowLogStatistics.html",
+        # "https://support.huaweicloud.com/api-taurusdb/ListAuditLogs.html",
 
         # kafka
-        "https://support.huaweicloud.com/api-kafka/ShowInstanceUsers.html",
-        "https://support.huaweicloud.com/api-kafka/ListTopicProducers.html",
-        "https://support.huaweicloud.com/api-kafka/ListInstances.html",
-        "https://support.huaweicloud.com/api-kafka/ListConnectorTasks.html",
+        # "https://support.huaweicloud.com/api-kafka/ShowInstanceUsers.html",
+        # "https://support.huaweicloud.com/api-kafka/ListTopicProducers.html",
+        # "https://support.huaweicloud.com/api-kafka/ListInstances.html",
+        # "https://support.huaweicloud.com/api-kafka/ListConnectorTasks.html",
+
+        "https://support.huaweicloud.com/api-rds/rds_06_0056.html"
     ]
     # generate_code(data_source_message)
     # print("============================================")
@@ -215,9 +291,12 @@ if __name__ == "__main__":
     # print("============================================")
     # generate(data_source_gaussdb_post)
 
-    for api in apis:
-        request = f"根据API：{api}，帮我生成一个data source"
-        generate(request)
+    # for api in apis:
+    #     request = f"根据API：{api}，帮我生成一个data source"
+        # generate(request)
+        # res = generate_data_source_code(request)
+        # print("-----------------------------------")
+        # print(res)
 
 
 
